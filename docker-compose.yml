@@ -1,0 +1,26 @@
+
+services:
+  api:
+    build: ./app
+    container_name: sessions-api
+    ports:
+      - "8000:8000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:8
+    container_name: sessions-mongodb
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo-data:

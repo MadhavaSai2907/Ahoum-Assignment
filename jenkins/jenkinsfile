@@ -1,0 +1,100 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'ahoum-sessions-api'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Check Dependencies') {
+            steps {
+                sh '''
+                    python3 --version
+                    pip3 --version
+                    docker --version
+                    docker compose version
+                    trivy --version
+                    git --version
+                '''
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                    python3 -m venv venv
+                    . venv/bin/activate
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                    pip install -r requirements-dev.txt
+                '''
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh '''
+                    . venv/bin/activate
+                    pytest -v
+                '''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                '''
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                sh '''
+                    trivy image --severity HIGH,CRITICAL \
+                    --exit-code 1 ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Deploy Locally') {
+            steps {
+                sh '''
+                    docker compose up -d --build
+                '''
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                sh '''
+                    sleep 10
+                    curl --fail http://localhost:8000/health
+                '''
+            }
+        }
+
+        stage('Production Approval') {
+            steps {
+                input message: 'Approve production deployment?', ok: 'Approve'
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker compose ps || true'
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check the stage logs.'
+        }
+    }
+}
