@@ -240,3 +240,10 @@ The Locust load test targets the local Docker deployment. ECS autoscaling config
 This project demonstrates a containerized application deployment approach using Docker, Terraform, Jenkins and AWS ECS.
 
 It covers CI/CD automation, infrastructure configuration, security scanning, monitoring, autoscaling design and operational recovery procedures.
+
+## 5. Evidence and Screenshots
+
+The `images/` folder contains screenshots and visual evidence of the project implementation and testing.
+
+
+
